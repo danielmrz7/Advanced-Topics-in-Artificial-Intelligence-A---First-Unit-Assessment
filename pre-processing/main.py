@@ -1,12 +1,6 @@
 import pandas as pd
 import numpy as np
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
-from scipy.stats import ks_2samp, chi2_contingency
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 import kagglehub
 import shutil,os
 import wandb
@@ -49,14 +43,44 @@ temp_path = "temp_raw.csv"
 df_raw.to_csv(temp_path, index=False )
 artifact.add_file(temp_path)
 
+wandb.summary["rows"]= len(df_raw) #lista as linhas   
+wandb.summary["columns"]= list(df_raw.columns) #lista os nomes das colunas
+
+#tratamento de dados
+le_weather = LabelEncoder()
+df_raw['Weather Type'] = le_weather.fit_transform(df_raw['Weather Type'])
+
+cloud_order = {'clear': 0, 'partly cloudy': 1, 'cloudy': 2, 'overcast': 3}
+df_raw['Cloud Cover'] = df_raw['Cloud Cover'].map(cloud_order)
+
+df_raw = pd.get_dummies(df_raw, columns=['Season', 'Location'])
+
+def remove_outliers(df):
+    num_cols = df.select_dtypes(include=[np.number]).columns
+    for col in num_cols:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
+    return df
+
+colunas_para_normalizar = ['Temperature', 'Humidity', 'Wind Speed','Precipitation (%)', 'Atmospheric Pressure', 'UV Index', 'Visibility (km)']
+scaler = MinMaxScaler()
+df_raw[colunas_para_normalizar] = scaler.fit_transform(df_raw[colunas_para_normalizar])
+
+df_processed = remove_outliers(df_raw)
+
+temp_path = "temp_processed.csv"
+df_raw.to_csv(temp_path, index=False )
+artifact.add_file(temp_path)
+
 #envia o artefato para o wandb
 wandb.log_artifact(artifact)
-
 
 wandb.summary["rows"]= len(df_raw) #lista as linhas   
 wandb.summary["columns"]= list(df_raw.columns) #lista os nomes das colunas
 
 #finaliza o carregamento
 wandb.finish()
-
-
