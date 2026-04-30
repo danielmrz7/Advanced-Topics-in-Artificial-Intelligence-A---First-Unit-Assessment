@@ -22,7 +22,7 @@ low_memory = False
 print(f"Shape:{df_raw.shape}")
 print(f"Columns:{list(df_raw.columns[:10])}")
 
-#nicializa o projeto no Weights & Biases
+#inicializa o projeto no Weights & Biases
 #nomeia o projeto
 #job_type é o tipo de tarefa carregamento de dados brutos
 #name é o nome do job pra essa tarefa
@@ -62,7 +62,7 @@ df_raw['Weather Type'] = le_weather.fit_transform(df_raw['Weather Type'])
 #mapeamento dos valores
 #mapeia os valores de cloud cover para números ordinais com posiçoes
 #cria o dicionário para armazer os tipos de clima
-#mantem a ordem: clear < partly <  cloudy < cloudy < overcast
+#mantem a ordem: clear < partly <  cloudy < overcast
 #começa de limpo < parcialmente nublado < nublado < nublado porem com nuvens mais escuras
 cloud_order = {'clear': 0, 'partly cloudy': 1, 'cloudy': 2, 'overcast': 3}
 df_raw['Cloud Cover'] = df_raw['Cloud Cover'].map(cloud_order)
@@ -84,20 +84,20 @@ def remove_outliers(df):
         df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
     return df
 
+#executa a função para remover os outliers do dataset
+df_processed = remove_outliers(df_raw)
+
 #normalização
 #cria uma lista com as colunas numéricas que serão normalizadas para o binário
 colunas_para_normalizar = ['Temperature', 'Humidity', 'Wind Speed','Precipitation (%)', 'Atmospheric Pressure', 'UV Index', 'Visibility (km)']
 
-#inicializa o normalizador MinMaxScaler com a escala valores para 0, 1
+#inicializa o normalizador MinMaxScaler com a escala valores para -1, 1
 #formula: (X - X_min) / (X_max - X_min)
-scaler = MinMaxScaler()
+scaler = MinMaxScaler(feature_range=(-1, 1))
 
 #normaliza as colunas nas colunas selecionadas
 #a função fit_transform => aprende os parametros e aplica a transformação
 df_raw[colunas_para_normalizar] = scaler.fit_transform(df_raw[colunas_para_normalizar])
-
-#executa a função para remover os outliers do dataset
-df_processed = remove_outliers(df_raw)
 
 
 #salva o dataset em um arquivo csv temporário
